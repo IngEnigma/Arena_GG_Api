@@ -1,0 +1,486 @@
+Login
+El usuario podrá iniciar sesión utilizando su nombre de usuario y contraseña.
+
+Registro
+El usuario podrá crear una cuenta proporcionando su correo electrónico, nombre de usuario y contraseña.
+
+Ranking
+Se podrá ver un ranking por juego (según el juego seleccionado).
+
+Cada entrada del ranking mostrará:
+
+Nombre de usuario
+
+Número de partidas jugadas
+
+Número de victorias
+
+Puntos acumulados
+
+Posición en el ranking
+
+Torneos (Tournaments)
+Se podrán filtrar torneos por:
+
+Juego seleccionado
+
+Fecha: Este mes (this month) o después (after)
+
+Estado: open (abierto), in progress (en curso), closed (cerrado)
+
+La lista de torneos mostrará:
+
+Logo del juego
+
+Nombre del torneo
+
+Estado
+
+Premios
+
+Detalle del Torneo (Tournament Detail)
+Al seleccionar un torneo, se podrá visualizar:
+
+Nombre del juego
+
+Fecha de inicio
+
+Cupos disponibles
+
+Modalidad: Solo / Grupo
+
+Reglas del torneo
+
+Requisitos
+
+Premios
+
+Bracket (estructura del torneo)
+
+Lista de participantes
+
+Opción para suscribirse al torneo
+
+Panel de Administración (Admin Panel)
+Mismas opciones de filtrado que los torneos públicos:
+
+Juego, fecha (this month, after), estado (open, in progress, closed)
+
+Muestra una lista de torneos con:
+
+Logo del juego
+
+Nombre del torneo
+
+Estado
+
+Premios
+
+Detalle del Torneo - Admin (Admin Tournament Detail)
+Visualización del torneo con acceso administrativo:
+
+Nombre del juego
+
+Fecha de inicio
+
+Cupos
+
+Modalidad: Solo / Grupo
+
+Reglas, requisitos, premios, bracket, participantes
+
+Estado del torneo
+
+Botones para:
+
+Editar torneo
+
+Eliminar torneo
+
+Edición de Torneo - Admin (Admin Tournament Edit)
+Formulario para editar los datos del torneo:
+
+Nombre del juego
+
+Fecha de inicio
+
+Cupos
+
+Modalidad
+
+Reglas, requisitos, premios, bracket
+
+Lista editable de participantes (con opción para eliminar)
+
+Estado del torneo
+
+Botones:
+
+Aplicar cambios
+
+Cancelar
+
+Creación de Torneo - Admin (Admin Tournament Create)
+Formulario para crear un nuevo torneo, ingresando:
+
+Nombre del juego
+
+Fecha de inicio
+
+Cupos
+
+Modalidad
+
+Reglas, requisitos, premios, bracket
+
+Lista inicial de participantes (opcional)
+
+Estado del torneo
+
+Botones:
+
+Crear torneo
+
+Cancelar
+
+
+============================================= SQL ===================================================
+
+-- ENUMs actualizados
+CREATE TYPE tournament_mode AS ENUM ('Solo', 'Team');
+CREATE TYPE tournament_status AS ENUM ('Open', 'Progress', 'Closed');
+
+-- Tabla de usuarios
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP
+);
+
+-- Tabla de juegos
+CREATE TABLE games (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  logo_url TEXT
+);
+
+-- Tabla de rankings por juego
+CREATE TABLE rankings (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  game_id INT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  matches_played INT DEFAULT 0,
+  wins INT DEFAULT 0,
+  points INT DEFAULT 0,
+  rank_position INT,
+  UNIQUE (user_id, game_id)
+);
+
+-- Tabla de torneos
+CREATE TABLE tournaments (
+  id SERIAL PRIMARY KEY,
+  game_id INT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  start_date DATE NOT NULL,
+  max_slots INT NOT NULL,
+  mode tournament_mode NOT NULL,
+  rules TEXT,
+  requirements TEXT,
+  prizes TEXT,
+  bracket_url TEXT,
+  status tournament_status NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP
+);
+
+-- Participantes en torneos de modalidad Solo
+CREATE TABLE tournament_participants (
+  id SERIAL PRIMARY KEY,
+  tournament_id INT NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (tournament_id, user_id)
+);
+
+-- Tabla de equipos (para torneos Team)
+CREATE TABLE teams (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Miembros de cada equipo
+CREATE TABLE team_members (
+  id SERIAL PRIMARY KEY,
+  team_id INT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (team_id, user_id)
+);
+
+-- Participación de equipos en torneos
+CREATE TABLE tournament_teams (
+  id SERIAL PRIMARY KEY,
+  tournament_id INT NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  team_id INT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  UNIQUE (tournament_id, team_id)
+);
+
+-- Administradores
+CREATE TABLE admins (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE
+);
+
+=======================================================================================================================
+
+🛠 Tecnologías y Buenas Prácticas Recomendadas
+Área	Recomendación
+ORM	Prisma o TypeORM
+Autenticación	JWT con Passport y bcrypt
+Validación	class-validator y class-transformer
+DTOs	Para validar entradas en los endpoints
+Inyección de dependencias	Usar interfaces + providers
+Testing	jest + mocks con interfaces
+Logs y errores	LoggerService, HttpExceptionFilter
+Gestión de estados	Usar enums para TournamentStatus, etc.
+
+=========================================================================================================================
+
+🧠 Separación de Responsabilidades
+Controllers: manejan la entrada y salida HTTP, sin lógica de negocio.
+
+Use-Cases: contienen la lógica de aplicación (ej. RegisterUser, GetTournamentRanking).
+
+Entities: representan las reglas del negocio y objetos ricos del dominio.
+
+Interfaces: definen contratos para inyección de dependencias (UserRepository, TournamentService).
+
+Infra: implementaciones concretas (ORM, servicios externos como JWT, almacenamiento).
+
+src/
+├── modules/
+│   ├── auth/                    # Módulo de autenticación (login, registro)
+│   │   ├── controllers/         # Controladores HTTP (NestJS)
+│   │   ├── use-cases/           # Casos de uso (lógica de aplicación)
+│   │   ├── entities/            # Entidades del dominio (ej. User)
+│   │   ├── dto/                 # Data Transfer Objects
+│   │   ├── services/            # Servicios de dominio o helpers
+│   │   ├── interfaces/          # Interfaces y abstracciones (ej. repo)
+│   │   ├── infra/               # Adaptadores concretos (repositorios, JWT, bcrypt)
+│   │   └── auth.module.ts
+│
+│   ├── rankings/
+│   │   ├── controllers/
+│   │   ├── use-cases/
+│   │   ├── entities/
+│   │   ├── dto/
+│   │   ├── services/
+│   │   ├── interfaces/
+│   │   ├── infra/
+│   │   └── rankings.module.ts
+│
+│   ├── tournaments/
+│   │   ├── controllers/
+│   │   ├── use-cases/
+│   │   ├── entities/
+│   │   ├── dto/
+│   │   ├── services/
+│   │   ├── interfaces/
+│   │   ├── infra/
+│   │   └── tournaments.module.ts
+│
+├── shared/
+│   ├── database/                # Conexiones, modelos TypeORM/Prisma/etc
+│   ├── decorators/              # Decoradores personalizados
+│   ├── guards/                  # JWT/Auth Guards
+│   ├── interceptors/           # Interceptores NestJS
+│   ├── middlewares/            # Middlewares NestJS
+│   ├── constants/              # Constantes generales
+│   ├── utils/                   # Utilidades generales
+│   └── enums/                   # Enums compartidos
+│
+├── app.module.ts               # Módulo raíz
+└── main.ts                     # Entry point
+
+===================================================ROADMAP==================================================================
+
+🧭 ROADMAP DE DESARROLLO - API NestJS de Torneos
+🛠️ FASE 1: Setup Inicial del Proyecto
+Inicializa el proyecto NestJS
+
+bash
+Copiar
+Editar
+nest new tournament-api
+Instala dependencias básicas
+
+bash
+Copiar
+Editar
+npm install @nestjs/config @nestjs/jwt @nestjs/passport passport passport-jwt bcrypt class-validator class-transformer
+npm install prisma --save-dev
+npx prisma init
+Configura .env y @nestjs/config
+
+Variables: JWT_SECRET, DB_URL, etc.
+
+Crea src/shared/config/config.module.ts y config.service.ts
+
+Crea la estructura base de carpetas
+Usa la propuesta anterior (modules/, shared/, etc.).
+
+👤 FASE 2: Módulo de Autenticación (auth)
+Crea el módulo auth
+
+bash
+Copiar
+Editar
+nest g module modules/auth
+Define entidad User y su repositorio
+
+Prisma o TypeORM
+
+Campos: id, username, email, passwordHash
+
+Implementa casos de uso
+
+RegisterUserUseCase
+
+LoginUserUseCase (genera JWT)
+
+Controlador AuthController
+
+POST /auth/register
+
+POST /auth/login
+
+Configura JWT Guard
+
+JwtStrategy, AuthGuard, y decorador @User()
+
+✅ Con esto ya tienes login/registro y JWT funcionando.
+
+🏗️ FASE 3: Estructura del Dominio Común
+Define entidades base y DTOs
+
+Tournament, RankingEntry, Game, User
+
+DTOs para crear/editar torneos, rankings
+
+Agrega enums y constantes en shared/
+
+TournamentStatus, TournamentMode
+
+🏆 FASE 4: Módulo de Rankings
+Crea módulo rankings
+
+Define entidad RankingEntry
+
+userId, gameId, playedGames, wins, points
+
+Caso de uso GetGameRankingUseCase
+
+Recibe un gameId y devuelve el top N de jugadores
+
+Controlador RankingsController
+
+GET /rankings/:gameId
+
+🏟️ FASE 5: Módulo de Torneos
+Crea módulo tournaments
+
+Define entidad Tournament
+
+id, name, gameId, date, slots, status, rules, prizes, participants, bracket, etc.
+
+Casos de uso
+
+GetTournamentsUseCase (con filtros)
+
+GetTournamentDetailUseCase
+
+SubscribeToTournamentUseCase
+
+Controlador público
+
+GET /tournaments
+
+GET /tournaments/:id
+
+POST /tournaments/:id/subscribe
+
+🛡️ FASE 6: Panel de Administración
+Define roles (opcional)
+
+Admin vs Usuario común
+
+Casos de uso
+
+CreateTournamentUseCase
+
+UpdateTournamentUseCase
+
+DeleteTournamentUseCase
+
+Controlador AdminTournamentsController
+
+Usa @UseGuards(JwtGuard, RolesGuard)
+
+CRUD: POST, PUT, DELETE torneos
+
+GET con filtros igual que público
+
+🧪 FASE 7: Pruebas
+Pruebas unitarias para:
+
+Casos de uso (mock repositorios)
+
+Servicios (helpers)
+
+Pruebas de integración:
+
+Endpoints principales
+
+Herramientas sugeridas:
+
+bash
+Copiar
+Editar
+npm install --save-dev jest @types/jest ts-jest
+🚀 FASE 8: Extras y Mejora Continua
+Documentación con Swagger
+
+bash
+Copiar
+Editar
+npm install --save @nestjs/swagger swagger-ui-express
+Validaciones con class-validator
+
+Logging centralizado
+
+CI/CD (GitHub Actions, Railway, etc.)
+
+Despliegue (Render, Railway, Vercel con proxy, etc.)
+
+🗂️ ORDEN DE EJECUCIÓN SUGERIDO
+Setup + estructura
+
+Auth completo
+
+Rankings (lectura)
+
+Torneos públicos
+
+Panel admin (CRUD)
+
+Roles y guardias
+
+Pruebas
+
+Documentación y mejoras
+
+
