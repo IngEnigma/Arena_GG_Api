@@ -1,6 +1,6 @@
 import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
-import { RegisterUserUseCase } from '../use-cases/register_user.use_case';
-import { LoginUserUseCase } from '../use-cases/login_user.use_case';
+import { RegisterUserUseCase } from '../use-cases/register_user.usecase';
+import { LoginUserUseCase } from '../use-cases/login_user.usecase';
 import { AuthDto } from '../dto/auth.dto';
 import { Public } from '../../../shared/decorators/public.decorator';
 

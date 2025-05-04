@@ -1,6 +1,6 @@
-import { RegisterUserUseCase } from './use-cases/register_user.use_case';
+import { RegisterUserUseCase } from './use-cases/register_user.usecase';
 import { PrismaUserRepository } from './infra/prisma/user.repository';
-import { LoginUserUseCase } from './use-cases/login_user.use_case';
+import { LoginUserUseCase } from './use-cases/login_user.usecase';
 import { AuthController } from './controllers/auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthService } from './services/auth.service';

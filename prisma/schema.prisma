@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -35,100 +34,100 @@ enum game_name {
   Valorant
 }
 
-model user {
-  id         Int       @id @default(autoincrement())
-  email      String    @unique
-  username   String    @unique
-  passwordHash   String
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
-  deleted_at DateTime?
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  username     String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
+  deletedAt    DateTime?
 
-  rankings               rankings[]
-  tournament_participants tournament_participants[]
-  team_members            team_members[]
-  admins                  admins?
+  rankings               Ranking[]
+  tournamentParticipants TournamentParticipant[]
+  teamMembers            TeamMember[]
+  admin                  Admin?
 }
 
-model rankings {
-  id             Int       @id @default(autoincrement())
-  user_id        Int
-  game_name      game_name
-  matches_played Int       @default(0)
-  wins           Int       @default(0)
-  points         Int       @default(0)
-  rank_position  Int?
-
-  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, game_name])
-}
-
-model tournaments {
-  id             Int             @id @default(autoincrement())
-  game_name      game_name
-  name           String
-  start_date     DateTime
-  max_slots      Int
-  mode           tournament_mode
-  rules          String?
-  requirements   String?
-  prizes         String?
-  bracket_type   bracket_type
-  status         tournament_status
-  created_at     DateTime        @default(now())
-  updated_at     DateTime        @default(now())
-  deleted_at     DateTime?
-
-  tournament_participants tournament_participants[]
-  tournament_teams        tournament_teams[]
-}
-
-model tournament_participants {
+model Ranking {
   id            Int       @id @default(autoincrement())
-  tournament_id Int
-  user_id       Int
+  userId        Int
+  gameName      game_name
+  matchesPlayed Int       @default(0)
+  wins          Int       @default(0)
+  points        Int       @default(0)
+  rankPosition  Int?
 
-  tournaments tournaments @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
-  user       user       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([tournament_id, user_id])
+  @@unique([userId, gameName])
 }
 
-model teams {
-  id         Int          @id @default(autoincrement())
-  name       String
-  created_at DateTime     @default(now())
+model Tournament {
+  id           Int               @id @default(autoincrement())
+  gameName     game_name
+  name         String
+  startDate    DateTime
+  maxSlots     Int
+  mode         tournament_mode
+  rules        String?
+  requirements String?
+  prizes       String?
+  bracketType  bracket_type
+  status       tournament_status
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @default(now())
+  deletedAt    DateTime?
 
-  team_members     team_members[]
-  tournament_teams tournament_teams[]
+  participants TournamentParticipant[]
+  teams        TournamentTeam[]
 }
 
-model team_members {
-  id      Int  @id @default(autoincrement())
-  team_id Int
-  user_id Int
+model TournamentParticipant {
+  id           Int @id @default(autoincrement())
+  tournamentId Int
+  userId       Int
 
-  teams teams @relation(fields: [team_id], references: [id], onDelete: Cascade)
-  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([team_id, user_id])
+  @@unique([tournamentId, userId])
 }
 
-model tournament_teams {
-  id            Int @id @default(autoincrement())
-  tournament_id Int
-  team_id       Int
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
 
-  tournaments tournaments @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
-  teams       teams       @relation(fields: [team_id], references: [id], onDelete: Cascade)
-
-  @@unique([tournament_id, team_id])
+  members TeamMember[]
+  entries TournamentTeam[]
 }
 
-model admins {
-  id      Int  @id @default(autoincrement())
-  user_id Int  @unique
+model TeamMember {
+  id     Int @id @default(autoincrement())
+  teamId Int
+  userId Int
 
-  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model TournamentTeam {
+  id           Int @id @default(autoincrement())
+  tournamentId Int
+  teamId       Int
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, teamId])
+}
+
+model Admin {
+  id     Int @id @default(autoincrement())
+  userId Int @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

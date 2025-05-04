@@ -149,6 +149,20 @@ Cancelar
 -- ENUMs actualizados
 CREATE TYPE tournament_mode AS ENUM ('Solo', 'Team');
 CREATE TYPE tournament_status AS ENUM ('Open', 'Progress', 'Closed');
+CREATE TYPE bracket_type AS ENUM (
+  'Single Elimination',
+  'Double Elimination',
+  'Free For All',
+  'Round Robin',
+  'Swiss',
+  'Leaderboard'
+);
+CREATE TYPE game_name AS ENUM (
+  'League of Legends',
+  'Rocket League',
+  'Counter Strike',
+  'Valorant'
+);
 
 -- Tabla de usuarios
 CREATE TABLE users (
@@ -161,29 +175,22 @@ CREATE TABLE users (
   deleted_at TIMESTAMP
 );
 
--- Tabla de juegos
-CREATE TABLE games (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL UNIQUE,
-  logo_url TEXT
-);
-
 -- Tabla de rankings por juego
 CREATE TABLE rankings (
   id SERIAL PRIMARY KEY,
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  game_id INT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  game_name game_name NOT NULL,
   matches_played INT DEFAULT 0,
   wins INT DEFAULT 0,
   points INT DEFAULT 0,
   rank_position INT,
-  UNIQUE (user_id, game_id)
+  UNIQUE (user_id, game_name)
 );
 
 -- Tabla de torneos
 CREATE TABLE tournaments (
   id SERIAL PRIMARY KEY,
-  game_id INT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  game_name game_name NOT NULL,
   name VARCHAR(255) NOT NULL,
   start_date DATE NOT NULL,
   max_slots INT NOT NULL,
@@ -191,7 +198,7 @@ CREATE TABLE tournaments (
   rules TEXT,
   requirements TEXT,
   prizes TEXT,
-  bracket_url TEXT,
+  bracket_type bracket_type NOT NULL,
   status tournament_status NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -234,6 +241,7 @@ CREATE TABLE admins (
   id SERIAL PRIMARY KEY,
   user_id INT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE
 );
+
 
 =======================================================================================================================
 
