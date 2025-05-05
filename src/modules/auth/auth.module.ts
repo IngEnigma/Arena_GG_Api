@@ -1,11 +1,10 @@
-import { RegisterUserUseCase } from './use-cases/register_user.usecase';
-import { PrismaUserRepository } from './infra/prisma/user.repository';
-import { LoginUserUseCase } from './use-cases/login_user.usecase';
-import { AuthController } from './controllers/auth.controller';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { AuthService } from './services/auth.service';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { AuthController } from './controllers/auth.controller';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { RegisterUserUseCase } from './use-cases/register_user.usecase';
+import { LoginUserUseCase } from './use-cases/login_user.usecase';
+import { PrismaUserRepository } from './infra/prisma/user.repository';
 
 @Module({
   imports: [
@@ -16,7 +15,6 @@ import { JwtModule } from '@nestjs/jwt';
   ],
   controllers: [AuthController],
   providers: [
-    AuthService,
     RegisterUserUseCase,
     LoginUserUseCase,
     JwtStrategy,
@@ -25,6 +23,5 @@ import { JwtModule } from '@nestjs/jwt';
       useClass: PrismaUserRepository,
     },
   ],
-  exports: [AuthService],
 })
 export class AuthModule {}

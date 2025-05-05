@@ -1,33 +1,25 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { UnauthorizedException } from '@nestjs/common';
 
 @Injectable()
-export class AuthGuard implements CanActivate {
+export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (isPublic) return true;
+    const requiredRoles = this.reflector.get<string[]>('roles', context.getHandler());
+    
+    if (!requiredRoles) {
+      return true; 
+    }
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    if (!user) {
-      throw new UnauthorizedException('Usuario no autenticado');
+    if (!user || !user.role || !requiredRoles.includes(user.role.toLowerCase())) {
+      throw new UnauthorizedException('You do not have permission to access this resource');
     }
 
     return true;
   }
 }
-
-  

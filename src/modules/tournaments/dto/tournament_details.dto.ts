@@ -14,14 +14,14 @@ export interface TeamParticipant {
 export class Tournament {
   id: number;
   name: string;
-  game_name: game_name;
-  start_date: Date;
-  slots: number;
+  gameName: game_name;
+  startDate: Date;
+  maxSlots: number;
   mode: tournament_mode;
   rules: string;
   requirements: string;
   prizes: string;
-  bracket_type: bracket_type;
+  bracketType: bracket_type;
   status: tournament_status;
   createdAt: Date;
   updatedAt: Date;

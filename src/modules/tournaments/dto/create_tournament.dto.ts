@@ -12,23 +12,23 @@ import {
   
   export class CreateTournamentDto {
     @IsEnum(GameName)
-    game_name: GameName;
+    gameName: GameName;
   
     @IsString()
     name: string;
   
     @IsDateString()
-    start_date: string;
+    startDate: string;
   
     @IsInt()
     @Min(2)
-    max_slots: number;
+    maxSlots: number;
   
     @IsEnum(TournamentMode)
     mode: TournamentMode;
   
     @IsEnum(BracketType)
-    bracket_type: BracketType;
+    bracketType: BracketType;
   
     @IsEnum(TournamentStatus)
     status: TournamentStatus;

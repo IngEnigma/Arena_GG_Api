@@ -4,6 +4,7 @@ export class User {
     public readonly email: string,
     public readonly username: string,
     public readonly passwordHash: string,
+    public readonly role: 'user' | 'admin',
     public readonly createdAt?: Date,
     public readonly updatedAt?: Date,
     public readonly deletedAt?: Date | null,

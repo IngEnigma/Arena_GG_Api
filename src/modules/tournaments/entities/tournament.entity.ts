@@ -9,7 +9,7 @@ export class Tournament {
     public readonly name: string,
     public readonly game: GameName,
     public readonly startDate: Date,
-    public readonly slots: number,
+    public readonly maxSlots: number,
     public readonly mode: TournamentMode,
     public readonly rules: string,
     public readonly requirements: string,

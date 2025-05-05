@@ -8,30 +8,35 @@ datasource db {
 }
 
 enum tournament_mode {
-  Solo
-  Team
+  solo
+  team
+}
+
+enum user_role {
+  user
+  admin
 }
 
 enum tournament_status {
-  Open
-  Progress
-  Closed
+  open
+  progress
+  closed
 }
 
 enum bracket_type {
-  Single_Elimination
-  Double_Elimination
-  Free_For_All
-  Round_Robin
-  Swiss
-  Leaderboard
+  singleElimination
+  doubleElimination
+  freeForAll
+  roundRobin
+  swiss
+  leaderboard
 }
 
 enum game_name {
-  League_of_Legends
-  Rocket_League
-  Counter_Strike
-  Valorant
+  leagueOfLegends
+  rocketLeague
+  counterStrike
+  valorant
 }
 
 model User {
@@ -39,14 +44,14 @@ model User {
   email        String    @unique
   username     String    @unique
   passwordHash String
+  role         user_role  @default(user)
   createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
   rankings               Ranking[]
   tournamentParticipants TournamentParticipant[]
   teamMembers            TeamMember[]
-  admin                  Admin?
 }
 
 model Ranking {
@@ -76,7 +81,7 @@ model Tournament {
   bracketType  bracket_type
   status       tournament_status
   createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   deletedAt    DateTime?
 
   participants TournamentParticipant[]
@@ -96,7 +101,7 @@ model TournamentParticipant {
 
 model Team {
   id        Int      @id @default(autoincrement())
-  name      String
+  name      String   @unique
   createdAt DateTime @default(now())
 
   members TeamMember[]
@@ -123,11 +128,4 @@ model TournamentTeam {
   team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@unique([tournamentId, teamId])
-}
-
-model Admin {
-  id     Int @id @default(autoincrement())
-  userId Int @unique
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

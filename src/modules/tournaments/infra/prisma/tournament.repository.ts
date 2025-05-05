@@ -6,179 +6,249 @@ import { UpdateTournamentDto } from '../../dto/update_tournament.dto';
 import { FilterTournamentsDto } from '../../dto/filter_tournaments.dto';
 import { Tournament } from '../../entities/tournament.entity';
 import { DateFilter } from 'src/shared/enums/date_filter.enum';
-import { tournament_mode} from '@prisma/client';
+import { game_name, tournament_mode } from '@prisma/client';
+import { BasicTournament } from '../../dto/basic_tournament.dto';
+import {
+  toPrismaBracketType,
+  toPrismaGameName,
+  toPrismaTournamentMode,
+  toPrismaTournamentStatus,
+} from 'src/shared/mappings/to_prisma_enum.mapper';
+import { AppLogger } from 'src/shared/logger/logger';
+import { TournamentTeamEntity } from '../../entities/tournament_team.entity';
+import { TeamMemberEntity } from '../../entities/team_member.emtity';
+import { TeamEntity } from '../../entities/team.entity';
+import { TournamentParticipantEntity } from '../../entities/tournament_participant.entity';
 
 @Injectable()
 export class PrismaTournamentRepository implements TournamentRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly logger: AppLogger,
+  ) {
+    this.logger.setContext(PrismaTournamentRepository.name);
+  }
 
   private mapFromPrisma(data: any): Tournament {
-    const participants = data.mode === tournament_mode.Solo
-      ? (data.tournament_participants?.map(p => ({
+    const participants = data.mode === tournament_mode.solo
+      ? data.participants?.map(p => ({
           id: p.user?.id,
           username: p.user?.username,
           email: p.user?.email,
-        })) || [])
-      : (data.tournament_teams?.map(entry => ({
-          teamName: entry.teams?.name,
-          members: entry.teams?.team_members?.map(member => ({
+        })) || []
+      : data.teams?.map(entry => ({
+          teamName: entry.team?.name,
+          members: entry.team?.members?.map(member => ({
             id: member.user?.id,
             username: member.user?.username,
             email: member.user?.email,
           })) || [],
-        })) || []);
+        })) || [];
 
+    return new Tournament(
+      data.id,
+      data.name,
+      data.gameName,
+      data.startDate,
+      data.maxSlots,
+      data.mode,
+      data.rules,
+      data.requirements,
+      data.prizes,
+      data.bracketType,
+      participants,
+      data.status,
+      data.createdAt,
+      data.updatedAt,
+    );
+  }
+
+  private mapToBasicTournament(data: any): BasicTournament {
     return {
       id: data.id,
       name: data.name,
-      game: data.game_name,
-      startDate: data.start_date,
-      slots: data.max_slots,
-      mode: data.mode,
-      rules: data.rules ?? '',
-      requirements: data.requirements ?? '',
-      prizes: data.prizes ?? '',
-      bracket: data.bracket_type,
+      prizes: data.prizes,
       status: data.status,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      participants,
     };
   }
 
   async createTournament(data: CreateTournamentDto): Promise<Tournament> {
+    this.logger.log('Creating tournament', { name: data.name });
     const created = await this.prisma.tournament.create({
       data: {
         name: data.name,
-        gameName: data.game_name,
-        startDate: data.start_date,
-        maxSlots: data.max_slots,
-        mode: data.mode,
+        gameName: toPrismaGameName(data.gameName),
+        startDate: new Date(data.startDate),
+        maxSlots: data.maxSlots,
+        mode: toPrismaTournamentMode(data.mode),
         rules: data.rules,
         requirements: data.requirements,
         prizes: data.prizes,
-        bracketType: data.bracket_type,
-        status: data.status,
+        bracketType: toPrismaBracketType(data.bracketType),
+        status: toPrismaTournamentStatus(data.status),
       },
     });
-
     return this.mapFromPrisma(created);
   }
 
-  async updateTournament(
-    id: number,
-    data: UpdateTournamentDto,
-  ): Promise<Tournament> {
+  async updateTournament(id: number, data: UpdateTournamentDto): Promise<Tournament> {
+    this.logger.log('Updating tournament', { id });
     const updated = await this.prisma.tournament.update({
       where: { id },
       data: {
         name: data.name,
-        gameName: data.game_name,
-        startDate: data.start_date,
-        maxSlots: data.max_slots,
-        mode: data.mode,
+        gameName: data.gameName ? toPrismaGameName(data.gameName) : undefined,
+        startDate: data.startDate ? new Date(data.startDate) : undefined,
+        maxSlots: data.maxSlots,
+        mode: data.mode ? toPrismaTournamentMode(data.mode) : undefined,
         rules: data.rules,
         requirements: data.requirements,
         prizes: data.prizes,
-        bracketType: data.bracket_type,
-        status: data.status,
+        bracketType: data.bracketType ? toPrismaBracketType(data.bracketType) : undefined,
+        status: data.status ? toPrismaTournamentStatus(data.status) : undefined,
         updatedAt: new Date(),
       },
     });
-
     return this.mapFromPrisma(updated);
   }
 
   async deleteTournament(id: number): Promise<void> {
-    await this.prisma.tournament.delete({
-      where: { id },
-    });
+    this.logger.log('Deleting tournament', { id });
+    await this.prisma.tournament.delete({ where: { id } });
   }
 
   async findTournamentById(id: number): Promise<Tournament | null> {
+    this.logger.log('Fetching tournament by ID', { id });
     const found = await this.prisma.tournament.findUnique({
       where: { id },
       include: {
-        participants: {
+        participants: { include: { user: true } },
+        teams: {
           include: {
-            user: true,
+            team: {
+              include: { members: { include: { user: true } } },
+            },
           },
         },
+      },
+    });
+    return found ? this.mapFromPrisma(found) : null;
+  }
+
+  async findTournamentByNameAndGame(name: string, gameName: game_name): Promise<Tournament | null> {
+    this.logger.log('Fetching tournament by name and game', { name, gameName });
+    const found = await this.prisma.tournament.findFirst({
+      where: { name, gameName },
+      include: {
+        participants: { include: { user: true } },
         teams: {
           include: {
             team: {
               include: {
-                members: {
-                  include: {
-                    user: true,
-                  },
-                },
+                members: { include: { user: true } },
               },
             },
           },
         },
       },
     });
-
-    if (!found) return null;
-
-    return this.mapFromPrisma(found);
+    return found ? this.mapFromPrisma(found) : null;
   }
 
-  async findAllTournaments(
-    filters: FilterTournamentsDto,
-  ): Promise<Tournament[]> {
+  async findBasicTournaments(filters: FilterTournamentsDto): Promise<BasicTournament[]> {
+    this.logger.log('Fetching basic tournaments with filters', filters);
     const where: any = {};
 
-    if (filters.game_name) {
-      where.game_name = filters.game_name;
-    }
-
-    if (filters.status) {
-      where.status = filters.status;
-    }
-
+    if (filters.gameName) where.gameName = toPrismaGameName(filters.gameName);
+    if (filters.status) where.status = toPrismaTournamentStatus(filters.status);
+    
     if (filters.dateFilter === DateFilter.ThisMonth) {
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      where.start_date = {
-        gte: startOfMonth,
-        lte: endOfMonth,
+      where.startDate = {
+        gte: new Date(now.getFullYear(), now.getMonth(), 1),
+        lte: new Date(now.getFullYear(), now.getMonth() + 1, 0),
       };
     } else if (filters.dateFilter === DateFilter.After) {
-      where.start_date = {
-        gt: new Date(),
-      };
+      where.startDate = { gt: new Date() };
     }
 
     const tournaments = await this.prisma.tournament.findMany({
       where,
-      include: {
-        participants: {
-          include: {
-            user: true,
-          },
-        },
-        teams: {
-          include: {
-            team: {
-              include: {
-                members: {
-                  include: {
-                    user: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        startDate: 'asc',
-      },
+      orderBy: { startDate: 'asc' },
     });
 
-    return tournaments.map(t => this.mapFromPrisma(t));
+    return tournaments.map(this.mapToBasicTournament); 
   }
+
+  async subscribeUserToTournament(userId: number, tournamentId: number): Promise<void> {
+    await this.prisma.tournamentParticipant.create({
+      data: { userId, tournamentId },
+    });
+  }
+
+  async unsubscribeUserFromTournament(userId: number, tournamentId: number): Promise<void> {
+    await this.prisma.tournamentParticipant.deleteMany({
+      where: { userId, tournamentId },
+    });
+  }
+
+  async subscribeTeamToTournament(teamId: number, tournamentId: number): Promise<void> {
+    await this.prisma.tournamentTeam.create({
+      data: { teamId, tournamentId },
+    });
+  }
+
+  async unsubscribeTeamFromTournament(teamId: number, tournamentId: number): Promise<void> {
+    await this.prisma.tournamentTeam.deleteMany({
+      where: { teamId, tournamentId },
+    });
+  }
+
+  async findUserSubscription(userId: number, tournamentId: number) {
+    return this.prisma.tournamentParticipant.findUnique({
+      where: { tournamentId_userId: { tournamentId, userId } },
+    });
+  }
+
+  async findTeamSubscription(teamId: number, tournamentId: number) {
+    return this.prisma.tournamentTeam.findUnique({
+      where: { tournamentId_teamId: { tournamentId, teamId } },
+    });
+  }
+
+  async findTeamById(teamId: number): Promise<TeamEntity | null> {
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: {
+        members: true,
+        entries: true, 
+      },
+    });
+  
+    if (!team) return null;
+  
+    const members: TeamMemberEntity[] = team.members.map(
+      (m) => new TeamMemberEntity(m.id, m.teamId, m.userId)
+    );
+  
+    const entries: TournamentTeamEntity[] = team.entries.map(
+      (tt) => new TournamentTeamEntity(tt.id, tt.teamId, tt.tournamentId)
+    );
+  
+    return new TeamEntity(team.id, team.name, members, entries, team.createdAt);
+  }
+
+  async findUserById(userParticipantId: number): Promise<TournamentParticipantEntity | null> {
+    const participant = await this.prisma.tournamentParticipant.findUnique({
+      where: { id: userParticipantId },
+    });
+  
+    if (!participant) return null;
+  
+    return new TournamentParticipantEntity(
+      participant.id,
+      participant.tournamentId,
+      participant.userId,
+    );
+  }   
 }

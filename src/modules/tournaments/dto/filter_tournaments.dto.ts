@@ -6,7 +6,7 @@ import { DateFilter } from 'src/shared/enums/date_filter.enum';
 export class FilterTournamentsDto {
   @IsOptional()
   @IsEnum(GameName)
-  game_name?: GameName;
+  gameName?: GameName;
 
   @IsOptional()
   @IsEnum(TournamentStatus)
